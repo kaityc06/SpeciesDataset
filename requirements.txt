@@ -1,0 +1,23 @@
+# Core
+torch
+numpy
+Pillow
+matplotlib
+requests
+pandas
+
+# HuggingFace datasets (TreeOfLife, GBIF fallback)
+datasets
+
+# BIOSCAN-5M with full taxonomic metadata
+bioscan-dataset
+
+# LLM subject extraction (INQUIRE config)
+transformers
+accelerate
+
+# Qwen2-VL mask quality checker
+qwen-vl-utils
+
+# AnimalCLEF2026 individual re-ID dataset
+wildlife-datasets

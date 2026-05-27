@@ -1,0 +1,5 @@
+outputs/
+__pycache__/
+*.pyc
+inat21_cache/
+sam3/
