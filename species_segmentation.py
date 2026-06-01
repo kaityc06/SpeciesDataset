@@ -674,7 +674,7 @@ def _init_processor(config: DatasetConfig):
     return processor
 
 
-def _make_stream(config: DatasetConfig, num_samples: int, shard_id: int = 0, total_shards: int = 1, categories=None):
+def _make_stream(config: DatasetConfig, num_samples: int, shard_id: int = 0, total_shards: int = 1, categories=None, shuffle: bool = False, shuffle_seed: int = 42):
     """Build the sample iterable for the given config and sample limit."""
     if config.load_fn is not None:
         import inspect
@@ -685,6 +685,9 @@ def _make_stream(config: DatasetConfig, num_samples: int, shard_id: int = 0, tot
             kwargs["total_shards"] = total_shards
         if "categories" in params:
             kwargs["categories"] = categories
+        if "shuffle" in params:
+            kwargs["shuffle"] = shuffle
+            kwargs["shuffle_seed"] = shuffle_seed
         return config.load_fn(int(num_samples * 1.1), **kwargs)
     load_kwargs = dict(split=config.split, streaming=config.streaming)
     if config.dataset_name:
@@ -732,7 +735,7 @@ def test_config(
         os.remove(output_html)
 
     processor = _init_processor(config)
-    ds_stream = _make_stream(config, num_samples, categories=categories)
+    ds_stream = _make_stream(config, num_samples, categories=categories, shuffle=shuffle, shuffle_seed=shuffle_seed)
     if shuffle:
         if hasattr(ds_stream, "shuffle"):
             ds_stream = ds_stream.shuffle(seed=shuffle_seed, buffer_size=shuffle_buffer_size)
@@ -840,8 +843,18 @@ def process_dataset(
                 continue
             if records:
                 table = pa.Table.from_pandas(pd.DataFrame(records), preserve_index=False)
+                # Promote all-null columns to large_string so schema stays consistent
+                # across batches where optional fields (e.g. basis_of_record) happen to be all-None.
+                null_cols = [f.name for f in table.schema if pa.types.is_null(f.type)]
+                for col in null_cols:
+                    table = table.set_column(
+                        table.schema.get_field_index(col), col,
+                        table.column(col).cast(pa.large_utf8()),
+                    )
                 if writer is None:
                     writer = pq.ParquetWriter(parquet_output, table.schema)
+                else:
+                    table = table.cast(writer.schema)
                 writer.write_table(table)
                 total += len(records)
             n_processed += 1
@@ -868,7 +881,18 @@ def process_dataset(
             for i in range(total_shards)
         ]
         if all(os.path.exists(p) for p in all_shards):
-            merge_shards(out_subdir, delete_shards=True)
+            lock_path = os.path.join(out_subdir, "masks.merge.lock")
+            try:
+                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.close(fd)
+            except FileExistsError:
+                pass  # another task already claimed the merge
+            else:
+                try:
+                    merge_shards(out_subdir, delete_shards=True)
+                except Exception:
+                    os.remove(lock_path)  # allow retry on failure
+                    raise
 
 
 def merge_shards(dataset_dir: str, output_path: str = None, delete_shards: bool = False) -> None:
