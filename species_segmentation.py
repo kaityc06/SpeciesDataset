@@ -1,5 +1,6 @@
 import base64
 import io
+import os
 import sys
 import time
 import torch
@@ -82,11 +83,14 @@ class QwenMaskChecker:
         if self._model is not None:
             return
         from transformers import Qwen3_5ForConditionalGeneration, AutoProcessor
-        print(f"Loading Qwen3.5 model: {self._model_name} …")
-        self._processor = AutoProcessor.from_pretrained(self._model_name)
-        self._model = Qwen3_5ForConditionalGeneration.from_pretrained(
-            self._model_name, device_map="auto"
-        ).eval()
+        from filelock import FileLock
+        lock_path = "/mmfs1/gscratch/krishna/kaityc/qwen_hf_download.lock"
+        with FileLock(lock_path, timeout=600):
+            print(f"Loading Qwen3.5 model: {self._model_name} …")
+            self._processor = AutoProcessor.from_pretrained(self._model_name)
+            self._model = Qwen3_5ForConditionalGeneration.from_pretrained(
+                self._model_name, device_map="auto"
+            ).eval()
         print("Qwen3.5 ready.")
 
     def is_quality(self, original_pil: Image.Image, masked_pil: "Image.Image | None", text_prompt: str = "species subject") -> tuple[bool, str]:
@@ -730,9 +734,11 @@ def test_config(
     out_subdir = _dataset_output_dir(config)
     output_html = os.path.join(out_subdir, "report.html")
     print(f"[test_config] {config.name}  |  samples={num_samples}  |  html={output_html}")
-    if os.path.exists(output_html):
-        print(f"[test_config] Removing existing file: {output_html}")
+    try:
         os.remove(output_html)
+        print(f"[test_config] Removing existing file: {output_html}")
+    except FileNotFoundError:
+        pass
 
     processor = _init_processor(config)
     ds_stream = _make_stream(config, num_samples, categories=categories, shuffle=shuffle, shuffle_seed=shuffle_seed)
@@ -810,9 +816,16 @@ def process_dataset(
     else:
         parquet_output = os.path.join(out_subdir, "masks.parquet")
 
+    # Write to a .tmp path and atomically rename after close, so the final
+    # path only appears once the file is fully written (parquet footer included).
+    # This prevents merge_shards from reading an incomplete shard.
+    parquet_tmp = parquet_output + ".tmp"
+
     if os.path.exists(parquet_output):
         print(f"[process_dataset] Removing existing file: {parquet_output}")
         os.remove(parquet_output)
+    if os.path.exists(parquet_tmp):
+        os.remove(parquet_tmp)
 
     limit = num_samples if num_samples is not None else sys.maxsize
     shard_tag = f"shard={shard_id}/{total_shards}  |  " if total_shards > 1 else ""
@@ -852,7 +865,7 @@ def process_dataset(
                         table.column(col).cast(pa.large_utf8()),
                     )
                 if writer is None:
-                    writer = pq.ParquetWriter(parquet_output, table.schema)
+                    writer = pq.ParquetWriter(parquet_tmp, table.schema)
                 else:
                     table = table.cast(writer.schema)
                 writer.write_table(table)
@@ -865,6 +878,7 @@ def process_dataset(
             it.close()
         if writer is not None:
             writer.close()
+            os.rename(parquet_tmp, parquet_output)
 
     elapsed = time.time() - start
     h, m, s = int(elapsed) // 3600, (int(elapsed) % 3600) // 60, int(elapsed) % 60

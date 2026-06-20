@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from config import PLANTCLEF2026_CONFIG
+from config import CUB200_CONFIG
 from species_segmentation import process_dataset, test_config
 from test_duplicate_detection import dedup_visual_demo
 
@@ -13,30 +13,28 @@ num_samples_env = os.environ.get("NUM_SAMPLES")
 num_samples = int(num_samples_env) if num_samples_env else None
 
 """dedup_visual_demo(
-    PLANTCLEF2026_CONFIG,
-    num_images=30,
+    CUB200_CONFIG,
+    num_images=10,
     threshold=0.99,
-)"""
+)
+"""
 
-test_config(
-    PLANTCLEF2026_CONFIG,
+"""test_config(
+    CUB200_CONFIG,
     qwen_crop=True,
     qwen_isolate_mask=True,
     num_samples=30,
     dedup_threshold=0.99,
     shuffle=True,
-)
+)"""
 
-"""
 process_dataset(
-    PLANTCLEF2026_CONFIG,
+    CUB200_CONFIG,
     qwen_isolate_mask=True,
     qwen_crop=True,
     shard_id=shard_id,
     total_shards=total_shards,
-    num_samples=250, # per shard
-    dedup_threshold=0.99
+    dedup_threshold=0.99,
 )
-"""
 
 os._exit(0)

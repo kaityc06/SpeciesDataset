@@ -3,40 +3,31 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from config import TREEOFLIFE_CONFIG
+from config import HERBARIUM2022_CONFIG
 from species_segmentation import process_dataset, test_config
-from test_duplicate_detection import dedup_visual_demo
 
 shard_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
 total_shards = int(os.environ.get("TOTAL_SHARDS", os.environ.get("SLURM_ARRAY_TASK_COUNT", 1)))
 num_samples_env = os.environ.get("NUM_SAMPLES")
 num_samples = int(num_samples_env) if num_samples_env else None
 
-"""dedup_visual_demo(
-    TREEOFLIFE_CONFIG,
-    num_images=30,
-    threshold=0.99,
-)"""
-
 """test_config(
-    TREEOFLIFE_CONFIG,
+    HERBARIUM2022_CONFIG,
     qwen_crop=True,
     qwen_isolate_mask=True,
     num_samples=30,
     dedup_threshold=0.99,
-    categories={
-        k for k, v in TREEOFLIFE_CONFIG.class_mapping.items() if "microorganism" in v
-    }
+    shuffle=True,
 )"""
 
 process_dataset(
-    TREEOFLIFE_CONFIG,
+    HERBARIUM2022_CONFIG,
     qwen_isolate_mask=True,
     qwen_crop=True,
     shard_id=shard_id,
     total_shards=total_shards,
-    num_samples=250, # per shard
-    dedup_threshold=0.99
+    dedup_threshold=0.99,
+    num_samples=250,
 )
 
 os._exit(0)
