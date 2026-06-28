@@ -10,6 +10,8 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=kaitlynchen06@gmail.com
 
+set -e
+mkdir -p /mmfs1/gscratch/krishna/kaityc/inat21_cache
 cd /mmfs1/gscratch/krishna/kaityc/inat21_cache
 wget -c https://ml-inat-competition-datasets.s3.amazonaws.com/2021/train.tar.gz
 tar -xzf train.tar.gz

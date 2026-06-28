@@ -793,6 +793,9 @@ def process_dataset(
     shard_id: int = 0,
     total_shards: int = 1,
     dedup_threshold: float = DEDUP_THRESHOLD,
+    shuffle: bool = False,
+    shuffle_seed: int = 42,
+    shuffle_buffer_size: int = 1000,
 ) -> None:
     """Process the dataset and save accepted mask records to Parquet.
 
@@ -832,7 +835,15 @@ def process_dataset(
     print(f"[process_dataset] {config.name}  |  {shard_tag}samples={'all' if num_samples is None else num_samples}  |  parquet={parquet_output}")
 
     processor = _init_processor(config)
-    ds_stream = _make_stream(config, limit, shard_id=shard_id, total_shards=total_shards)
+    ds_stream = _make_stream(config, limit, shard_id=shard_id, total_shards=total_shards, shuffle=shuffle, shuffle_seed=shuffle_seed)
+    if shuffle:
+        if hasattr(ds_stream, "shuffle"):
+            ds_stream = ds_stream.shuffle(seed=shuffle_seed, buffer_size=shuffle_buffer_size)
+        else:
+            import random
+            ds_stream = list(ds_stream)
+            random.seed(shuffle_seed)
+            random.shuffle(ds_stream)
     duplicate_detector = DuplicateDetector(threshold=dedup_threshold)
 
     writer = None
