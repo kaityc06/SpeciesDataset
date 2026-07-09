@@ -22,8 +22,10 @@ cd "${SCRIPT_DIR}"
 export SPLIT="${SPLIT:-val}"
 export INAT21_VAL_SUBSET_SIZE="${INAT21_VAL_SUBSET_SIZE:-2500}"
 export INAT21_VAL_SUBSET_SEED="${INAT21_VAL_SUBSET_SEED:-42}"
+export INAT21_VAL_SUBSET_MANIFEST="${INAT21_VAL_SUBSET_MANIFEST:-data/val_species_balanced_subset_2500_seed42.json}"
 
 python prepare_val_subset.py \
   --split "${SPLIT}" \
   --target-size "${INAT21_VAL_SUBSET_SIZE}" \
-  --seed "${INAT21_VAL_SUBSET_SEED}"
+  --seed "${INAT21_VAL_SUBSET_SEED}" \
+  --manifest "${INAT21_VAL_SUBSET_MANIFEST}"

@@ -67,7 +67,7 @@ def _val_subset_manifest_path(split: str, target: int):
         return os.path.join(os.path.dirname(__file__), explicit)
 
     seed = _env_int("INAT21_VAL_SUBSET_SEED", 42)
-    return os.path.join(_INAT21_DATA_DIR, f"{split}_subset_{target}_seed{seed}.json")
+    return os.path.join(_INAT21_DATA_DIR, f"{split}_species_balanced_subset_{target}_seed{seed}.json")
 
 
 def _load_subset_images(split: str):
