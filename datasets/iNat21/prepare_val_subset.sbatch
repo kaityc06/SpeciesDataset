@@ -11,7 +11,7 @@
 #SBATCH --mail-user=kaitlynchen06@gmail.com
 #SBATCH --exclude=g3110
 
-set -euo pipefail
+set -eo pipefail
 
 source ~/.bashrc
 conda activate /gscratch/krishna/kaityc/conda_envs/species
