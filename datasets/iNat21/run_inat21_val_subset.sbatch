@@ -27,6 +27,16 @@ export TOTAL_SHARDS="${TOTAL_SHARDS:-${SLURM_ARRAY_TASK_COUNT:-10}}"
 export NUM_SAMPLES="${NUM_SAMPLES:-250}"
 export INAT21_VAL_SUBSET_SIZE="${INAT21_VAL_SUBSET_SIZE:-2500}"
 export INAT21_VAL_SUBSET_SEED="${INAT21_VAL_SUBSET_SEED:-42}"
+export SAM3_CHECKPOINT_PATH="${SAM3_CHECKPOINT_PATH:-/gscratch/krishna/kaityc/.cache/huggingface/hub/models--facebook--sam3/snapshots/3c879f39826c281e95690f02c7821c4de09afae7/sam3.pt}"
+export HF_HOME="${HF_HOME:-/gscratch/scrubbed/suryadv/repos/SpeciesDataset/.hf_cache}"
+export HUGGINGFACE_HUB_CACHE="${HUGGINGFACE_HUB_CACHE:-${HF_HOME}/hub}"
+export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${HF_HOME}/datasets}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-/gscratch/scrubbed/suryadv/repos/SpeciesDataset/.cache}"
+export MPLCONFIGDIR="${MPLCONFIGDIR:-${XDG_CACHE_HOME}/matplotlib}"
+export PYTHONPATH="/gscratch/krishna/kaityc/SpeciesDataset:${PYTHONPATH:-}"
+export LD_LIBRARY_PATH="/gscratch/krishna/kaityc/conda_envs/species/lib:${LD_LIBRARY_PATH:-}"
+
+mkdir -p "${HF_HOME}" "${HUGGINGFACE_HUB_CACHE}" "${HF_DATASETS_CACHE}" "${XDG_CACHE_HOME}" "${MPLCONFIGDIR}"
 
 python run.py \
   --mode "${MODE}" \
