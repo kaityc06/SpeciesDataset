@@ -7,7 +7,37 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, ROOT)
 
 from config import INAT21_CONFIG
-from species_segmentation import process_dataset, test_config
+import species_segmentation
+
+
+_SHARED_QWEN_LOCK = "/mmfs1/gscratch/krishna/kaityc/qwen_hf_download.lock"
+
+
+def _configure_runtime_paths() -> None:
+    output_dir = os.environ.get("INAT21_OUTPUT_DIR")
+    if output_dir:
+        output_dir = os.path.abspath(output_dir)
+
+        def _inat21_output_dir(_config):
+            os.makedirs(output_dir, exist_ok=True)
+            return output_dir
+
+        species_segmentation._dataset_output_dir = _inat21_output_dir
+
+    qwen_lock_path = os.environ.get("QWEN_HF_DOWNLOAD_LOCK")
+    if qwen_lock_path:
+        import filelock
+
+        qwen_lock_path = os.path.abspath(qwen_lock_path)
+        os.makedirs(os.path.dirname(qwen_lock_path), exist_ok=True)
+        original_file_lock = filelock.FileLock
+
+        def _runtime_file_lock(lock_file, *args, **kwargs):
+            if os.path.abspath(os.fspath(lock_file)) == _SHARED_QWEN_LOCK:
+                lock_file = qwen_lock_path
+            return original_file_lock(lock_file, *args, **kwargs)
+
+        filelock.FileLock = _runtime_file_lock
 
 
 def _env_int(name: str, default: int) -> int:
@@ -34,12 +64,13 @@ def main() -> None:
         default=_env_int("TOTAL_SHARDS", _env_int("SLURM_ARRAY_TASK_COUNT", 1)),
     )
     args = parser.parse_args()
+    _configure_runtime_paths()
 
     num_samples_env = os.environ.get("NUM_SAMPLES")
     num_samples = args.num_samples if args.num_samples is not None else int(num_samples_env or 250)
 
     if args.mode == "test":
-        test_config(
+        species_segmentation.test_config(
             INAT21_CONFIG,
             qwen_crop=True,
             qwen_isolate_mask=True,
@@ -50,7 +81,7 @@ def main() -> None:
         )
         return
 
-    process_dataset(
+    species_segmentation.process_dataset(
         INAT21_CONFIG,
         qwen_isolate_mask=True,
         qwen_crop=True,
